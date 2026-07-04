@@ -3,7 +3,7 @@ name: "Publish Release"
 on:
   push:
     tags:
-      - 'v*' # Trigger when pushing a tag like v1.0.0, v1.0.1, etc.
+      - 'v*' # Trigger on tagging (e.g. v1.0.0)
 
 jobs:
   publish-tauri:
@@ -13,10 +13,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest" # For macOS dmg/app
+          - platform: "macos-latest" # Build macOS
             args: "--target aarch64-apple-darwin"
-          - platform: "windows-latest" # For Windows exe/msi
+          - platform: "windows-latest" # Build Windows
             args: ""
+          - platform: "ubuntu-latest" # Build Android APK (ubuntu has fast build env)
+            args: "--target aarch64-linux-android"
+            android: true
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -30,11 +33,32 @@ jobs:
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          # Target for Apple Silicon (Mac M1/M2/M3)
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
+          targets: ${{ (matrix.platform == 'macos-latest' && 'aarch64-apple-darwin') || (matrix.android && 'aarch64-linux-android') || '' }}
+
+      # Setup Android SDK & NDK if building Android
+      - name: Set up JDK 17 (Android only)
+        if: matrix.android
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK (Android only)
+        if: matrix.android
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Android NDK (Android only)
+        if: matrix.android
+        run: |
+          sdkmanager --install "ndk;26.3.11579264"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.3.11579264" >> $GITHUB_ENV
+
+      - name: Install Android Target (Android only)
+        if: matrix.android
+        run: rustup target add aarch64-linux-android
 
       - name: install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-latest'
+        if: matrix.platform == 'ubuntu-latest' && !matrix.android
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
@@ -42,10 +66,17 @@ jobs:
       - name: install frontend dependencies
         run: npm install
 
+      # Initialize Android target on the runner since it is not committed in repository
+      - name: Init Android Target (Android only)
+        if: matrix.android
+        run: npx tauri android init --ci --skip-targets-install
+
       - name: Build and Publish
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Set NDK path for compiler
+          NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "RajbariIT Remote ${{ github.ref_name }}"
