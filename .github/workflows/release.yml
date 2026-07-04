@@ -6,7 +6,8 @@ on:
       - 'v*'
 
 jobs:
-  publish-tauri:
+  # ===== Desktop Builds (macOS, Windows, Linux) =====
+  publish-desktop:
     permissions:
       contents: write
     strategy:
@@ -18,11 +19,7 @@ jobs:
           - platform: "windows-latest"
             args: ""
           - platform: "ubuntu-latest"
-            args: "--target aarch64-linux-android"
-            android: true
-          - platform: "ubuntu-latest"
             args: ""
-            linux: true
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -36,60 +33,81 @@ jobs:
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ (matrix.platform == 'macos-latest' && 'aarch64-apple-darwin') || (matrix.android && 'aarch64-linux-android') || '' }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
 
-      # ===== Android Setup =====
-      - name: Set up JDK 17 (Android only)
-        if: matrix.android
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Setup Android SDK (Android only)
-        if: matrix.android
-        uses: android-actions/setup-android@v3
-
-      - name: Setup Android NDK (Android only)
-        if: matrix.android
-        run: |
-          sdkmanager --install "ndk;26.3.11579264"
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.3.11579264" >> $GITHUB_ENV
-
-      - name: Install Android Rust Target (Android only)
-        if: matrix.android
-        run: rustup target add aarch64-linux-android
-
-      # ===== Linux Desktop Setup =====
-      - name: install dependencies (Linux Desktop only)
-        if: matrix.linux
+      - name: install dependencies (Linux only)
+        if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
             libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev \
             libxcb-randr0-dev libxcb-shm0-dev libxcb-xfixes0-dev libxcb-shape0-dev
 
-      # ===== Common =====
-      - name: install Tauri CLI
-        run: cargo install tauri-cli --version "^2" --locked
-
       - name: install frontend dependencies
         run: npm install
-
-      # ===== Android Init =====
-      - name: Init Android Target (Android only)
-        if: matrix.android
-        run: cargo tauri android init --ci --skip-targets-install
 
       - name: Build and Publish
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "RajbariIT Remote ${{ github.ref_name }}"
-          releaseBody: "Automated release of RajbariIT Remote version ${{ github.ref_name }}."
+          releaseBody: "Automated release for Windows, macOS, Linux, and Android."
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  # ===== Android Build (separate job using cargo tauri android build) =====
+  publish-android:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Android NDK
+        run: |
+          sdkmanager --install "ndk;26.3.11579264"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/26.3.11579264" >> $GITHUB_ENV
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: install frontend dependencies
+        run: npm install
+
+      - name: Init Android project
+        run: cargo tauri android init --ci --skip-targets-install
+
+      - name: Build Android APK
+        run: cargo tauri android build --apk
+
+      - name: Upload APK to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: |
+            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
