@@ -1,0 +1,11 @@
+{
+    "name": "rajbariit-remote",
+    "version": "1.0.0",
+    "description": "RajbariIT Remote Lite - Cross-platform Remote Access Software",
+    "private": true,
+    "scripts": {
+        "tauri": "tauri",
+        "dev": "tauri dev",
+        "build": "tauri build"
+    }
+}

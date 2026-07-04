@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RajbariIT Remote</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <div class="app-container">
+        <!-- Title Bar -->
+        <header class="titlebar" data-tauri-drag-region>
+            <div class="titlebar-left">
+                <span class="app-icon">🔗</span>
+                <span class="app-name">RajbariIT Remote</span>
+                <span class="app-version">v1.0 Lite</span>
+            </div>
+            <div class="titlebar-right">
+                <span id="connection-status" class="status-badge status-ready">● Ready</span>
+            </div>
+        </header>
+
+        <!-- Main Layout: Sidebar + Content -->
+        <div class="app-body">
+            <!-- Sidebar Menu -->
+            <nav class="sidebar">
+                <div class="sidebar-profile">
+                    <div class="profile-avatar">🖥️</div>
+                    <div class="profile-info">
+                        <span id="sidebar-device-name" class="profile-name">My Device</span>
+                        <span class="profile-status">
+                            <span class="status-dot status-dot-green"></span> Online
+                        </span>
+                    </div>
+                </div>
+
+                <div class="sidebar-section-label">Features</div>
+
+                <ul class="sidebar-menu">
+                    <li class="menu-item active" data-page="dashboard" id="menu-dashboard">
+                        <span class="menu-icon">🏠</span>
+                        <span class="menu-label">Dashboard</span>
+                    </li>
+                    <li class="menu-item" data-page="discovery" id="menu-discovery">
+                        <span class="menu-icon">📡</span>
+                        <span class="menu-label">Discovery</span>
+                        <span class="menu-badge" id="device-count">0</span>
+                    </li>
+                    <li class="menu-item" data-page="screen" id="menu-screen">
+                        <span class="menu-icon">🖥️</span>
+                        <span class="menu-label">Screen Share</span>
+                    </li>
+                    <li class="menu-item" data-page="control" id="menu-control">
+                        <span class="menu-icon">🖱️</span>
+                        <span class="menu-label">Remote Control</span>
+                    </li>
+                    <li class="menu-item" data-page="security" id="menu-security">
+                        <span class="menu-icon">🔐</span>
+                        <span class="menu-label">Security</span>
+                    </li>
+                    <li class="menu-item" data-page="transfer" id="menu-transfer">
+                        <span class="menu-icon">📁</span>
+                        <span class="menu-label">File Transfer</span>
+                    </li>
+                </ul>
+
+                <div class="sidebar-footer">
+                    <div class="sidebar-section-label">Quick Info</div>
+                    <div class="sidebar-info-box">
+                        <div class="info-mini-row">
+                            <span>PIN</span>
+                            <span id="sidebar-pin" class="pin-mini">------</span>
+                        </div>
+                        <div class="info-mini-row">
+                            <span>Network</span>
+                            <span id="sidebar-network">LAN</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Content Area -->
+            <main class="content-area">
+                <!-- ===== PAGE: Dashboard ===== -->
+                <div class="page active" id="page-dashboard">
+                    <div class="page-header">
+                        <h1>Dashboard</h1>
+                        <p class="page-desc">Overview of your device and quick actions</p>
+                    </div>
+
+                    <div class="cards-row">
+                        <!-- This Device Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-icon">🖥️</span>
+                                <h2>This Device</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="info-row">
+                                    <label>Device Name</label>
+                                    <span id="device-name" class="info-value">Loading...</span>
+                                </div>
+                                <div class="info-row">
+                                    <label>Security PIN</label>
+                                    <div class="pin-display">
+                                        <span id="security-pin" class="pin-code">------</span>
+                                        <button id="btn-refresh-pin" class="btn-icon" title="Refresh PIN">🔄</button>
+                                    </div>
+                                </div>
+                                <div class="info-row">
+                                    <label>Hosting</label>
+                                    <span id="host-status" class="info-value">
+                                        <span class="status-dot status-dot-red"></span> Stopped
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-actions">
+                                <button id="btn-start-host" class="btn btn-primary">
+                                    <span>📡</span> Start Hosting
+                                </button>
+                                <button id="btn-stop-host" class="btn btn-danger" style="display:none;">
+                                    <span>⏹️</span> Stop Hosting
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Connect Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-icon">⚡</span>
+                                <h2>Quick Connect</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="input-group">
+                                    <label>Target IP</label>
+                                    <input type="text" id="target-ip" placeholder="e.g. 192.168.1.15" />
+                                </div>
+                                <div class="input-group">
+                                    <label>PIN</label>
+                                    <input type="text" id="target-pin" placeholder="6-digit PIN" maxlength="6" />
+                                </div>
+                            </div>
+                            <div class="card-actions">
+                                <button id="btn-connect" class="btn btn-accent">
+                                    <span>⚡</span> Connect
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Row -->
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <span class="stat-icon">📡</span>
+                            <div class="stat-info">
+                                <span class="stat-number" id="stat-devices">0</span>
+                                <span class="stat-label">Devices Found</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-icon">🔗</span>
+                            <div class="stat-info">
+                                <span class="stat-number" id="stat-connections">0</span>
+                                <span class="stat-label">Active Sessions</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-icon">📁</span>
+                            <div class="stat-info">
+                                <span class="stat-number" id="stat-transfers">0</span>
+                                <span class="stat-label">Files Sent</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== PAGE: Discovery ===== -->
+                <div class="page" id="page-discovery">
+                    <div class="page-header">
+                        <h1>Device Discovery</h1>
+                        <p class="page-desc">Find devices on your local network</p>
+                        <button id="btn-scan" class="btn btn-primary btn-sm">
+                            <span>🔍</span> Scan Now
+                        </button>
+                    </div>
+
+                    <div class="devices-list" id="devices-list">
+                        <div class="devices-empty" id="devices-empty">
+                            <span class="empty-icon">📡</span>
+                            <p>Scanning for devices on your local network...</p>
+                            <div class="scan-animation">
+                                <div class="scan-ring"></div>
+                                <div class="scan-ring"></div>
+                                <div class="scan-ring"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== PAGE: Screen Share ===== -->
+                <div class="page" id="page-screen">
+                    <div class="page-header">
+                        <h1>Screen Sharing</h1>
+                        <p class="page-desc">Share your screen or view a remote device</p>
+                    </div>
+
+                    <div class="cards-row">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-icon">📤</span>
+                                <h2>Host (Share Your Screen)</h2>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-desc">Start hosting so others can view your screen.</p>
+                                <div class="info-row">
+                                    <label>Port</label>
+                                    <span class="info-value">9095</span>
+                                </div>
+                                <div class="info-row">
+                                    <label>Status</label>
+                                    <span id="screen-host-status" class="info-value">
+                                        <span class="status-dot status-dot-red"></span> Not hosting
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-actions">
+                                <button id="btn-start-screen" class="btn btn-primary">
+                                    <span>📡</span> Start Sharing
+                                </button>
+                                <button id="btn-stop-screen" class="btn btn-danger" style="display:none;">
+                                    <span>⏹️</span> Stop Sharing
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-icon">📥</span>
+                                <h2>View (Remote Screen)</h2>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-desc">Connect to view another device's screen.</p>
+                                <div class="input-group">
+                                    <label>Host IP</label>
+                                    <input type="text" id="view-ip" placeholder="e.g. 192.168.1.15" />
+                                </div>
+                                <div class="connect-mode">
+                                    <label class="radio-label">
+                                        <input type="radio" name="mode" value="control" checked />
+                                        <span>🖱️ Control</span>
+                                    </label>
+                                    <label class="radio-label">
+                                        <input type="radio" name="mode" value="view" />
+                                        <span>👁️ View Only</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="card-actions">
+                                <button id="btn-view-connect" class="btn btn-accent">
+                                    <span>👁️</span> Connect & View
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== PAGE: Remote Control ===== -->
+                <div class="page" id="page-control">
+                    <div class="page-header">
+                        <h1>Remote Control</h1>
+                        <p class="page-desc">Control a connected device's mouse and keyboard</p>
+                    </div>
+
+                    <div class="control-panel">
+                        <div class="control-status-card">
+                            <span class="control-status-icon" id="control-icon">🔌</span>
+                            <h3 id="control-status-text">Not Connected</h3>
+                            <p>Connect to a device first via Dashboard or Screen Share</p>
+                        </div>
+
+                        <!-- Remote Canvas (shown when connected) -->
+                        <div class="session-canvas-wrapper" id="canvas-wrapper" style="display:none;">
+                            <div class="session-toolbar">
+                                <span class="session-info">
+                                    <span class="status-dot status-dot-green"></span>
+                                    Connected to <span id="session-target">192.168.1.15</span>
+                                </span>
+                                <div class="session-controls">
+                                    <button id="btn-fullscreen" class="btn-icon" title="Fullscreen">⛶</button>
+                                    <button id="btn-screenshot" class="btn-icon" title="Screenshot">📸</button>
+                                    <button id="btn-disconnect" class="btn btn-danger btn-sm">Disconnect</button>
+                                </div>
+                            </div>
+                            <canvas id="remote-screen" class="remote-canvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== PAGE: Security ===== -->
+                <div class="page" id="page-security">
+                    <div class="page-header">
+                        <h1>Security</h1>
+                        <p class="page-desc">Manage your connection PIN and security settings</p>
+                    </div>
+
+                    <div class="cards-row">
+                        <div class="card card-wide">
+                            <div class="card-header">
+                                <span class="card-icon">🔐</span>
+                                <h2>Connection PIN</h2>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-desc">Share this PIN with trusted users who want to connect to your device.</p>
+                                <div class="pin-large-display">
+                                    <span id="pin-large" class="pin-large">------</span>
+                                </div>
+                                <div class="pin-info">
+                                    <span>⏱️ PIN expires in <strong>10 minutes</strong></span>
+                                </div>
+                            </div>
+                            <div class="card-actions card-actions-center">
+                                <button id="btn-regen-pin" class="btn btn-primary">
+                                    <span>🔄</span> Generate New PIN
+                                </button>
+                                <button id="btn-copy-pin" class="btn btn-secondary">
+                                    <span>📋</span> Copy PIN
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-icon">🛡️</span>
+                                <h2>Security Info</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="security-item">
+                                    <span class="security-check">✅</span>
+                                    <span>PIN-based authentication</span>
+                                </div>
+                                <div class="security-item">
+                                    <span class="security-check">✅</span>
+                                    <span>LAN-only connections</span>
+                                </div>
+                                <div class="security-item">
+                                    <span class="security-check">✅</span>
+                                    <span>Auto-expiring PINs (10 min)</span>
+                                </div>
+                                <div class="security-item">
+                                    <span class="security-check">✅</span>
+                                    <span>No cloud — direct P2P</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== PAGE: File Transfer ===== -->
+                <div class="page" id="page-transfer">
+                    <div class="page-header">
+                        <h1>File Transfer</h1>
+                        <p class="page-desc">Send and receive files from connected devices</p>
+                    </div>
+
+                    <div class="cards-row">
+                        <div class="card card-wide">
+                            <div class="card-header">
+                                <span class="card-icon">📤</span>
+                                <h2>Send Files</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="input-group">
+                                    <label>Target Device IP</label>
+                                    <input type="text" id="transfer-ip" placeholder="e.g. 192.168.1.15" />
+                                </div>
+                                <div class="drop-zone" id="drop-zone">
+                                    <span class="drop-icon">📤</span>
+                                    <p>Drag & drop files here or click to select</p>
+                                    <input type="file" id="file-input" multiple style="display:none;" />
+                                </div>
+                                <div class="transfer-progress" id="transfer-progress" style="display:none;">
+                                    <div class="progress-info">
+                                        <span id="transfer-filename">file.txt</span>
+                                        <span id="transfer-percent">0%</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="progress-fill"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-icon">📥</span>
+                                <h2>Receive Files</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="info-row">
+                                    <label>Receive Port</label>
+                                    <span class="info-value">9096</span>
+                                </div>
+                                <div class="info-row">
+                                    <label>Save Location</label>
+                                    <span class="info-value">~/Downloads</span>
+                                </div>
+                                <div class="info-row">
+                                    <label>Server Status</label>
+                                    <span id="receive-status" class="info-value">
+                                        <span class="status-dot status-dot-green"></span> Listening
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span>RajbariIT Remote Lite v1.0</span>
+            <span>•</span>
+            <span id="network-info">LAN Mode</span>
+        </footer>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

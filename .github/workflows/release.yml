@@ -1,0 +1,55 @@
+name: "Publish Release"
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger when pushing a tag like v1.0.0, v1.0.1, etc.
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest" # For macOS dmg/app
+            args: "--target aarch64-apple-darwin"
+          - platform: "windows-latest" # For Windows exe/msi
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Target for Apple Silicon (Mac M1/M2/M3)
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: install frontend dependencies
+        run: npm install
+
+      - name: Build and Publish
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "RajbariIT Remote ${{ github.ref_name }}"
+          releaseBody: "Automated release of RajbariIT Remote version ${{ github.ref_name }}."
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
