@@ -1,13 +1,9 @@
 // ============================================
 // Feature 3: Remote Input Control — input.rs
 // ============================================
-// Simulates mouse and keyboard events on the local machine
-// using the enigo crate for cross-platform input injection.
+// Desktop: Simulates mouse and keyboard events using enigo crate.
+// Android: Stub functions (input simulation not supported).
 
-use enigo::{
-    Enigo, Settings, Coordinate, Direction, Key, Button, Axis,
-    Keyboard, Mouse,
-};
 use serde::Deserialize;
 
 /// Modifiers state for keyboard events
@@ -19,16 +15,23 @@ pub struct KeyModifiers {
     pub meta: bool,
 }
 
-/// Send a mouse event to the local system.
-/// `x` and `y` are normalized values (0-65535).
-/// `action`: "move", "left_click", "right_click", "scroll_up", "scroll_down"
+// ======================================================
+// Desktop Implementation (Windows, macOS, Linux)
+// ======================================================
+
+#[cfg(not(target_os = "android"))]
+use enigo::{
+    Enigo, Settings, Coordinate, Direction, Key, Button, Axis,
+    Keyboard, Mouse,
+};
+
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 pub fn send_mouse_event(x: i32, y: i32, action: String) -> Result<(), String> {
     let mut enigo = Enigo::new(&Settings::default()).map_err(|e| format!("Enigo error: {}", e))?;
 
     match action.as_str() {
         "move" => {
-            // Convert normalized coords (0-65535) to screen pixels
             let screen_x = (x as f64 / 65535.0 * 1920.0) as i32;
             let screen_y = (y as f64 / 65535.0 * 1080.0) as i32;
             enigo.move_mouse(screen_x, screen_y, Coordinate::Abs)
@@ -62,32 +65,24 @@ pub fn send_mouse_event(x: i32, y: i32, action: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Send a keyboard event to the local system.
-/// `key`: the key character or name (e.g. "a", "Enter", "Backspace")
-/// `modifiers`: which modifier keys are held
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 pub fn send_key_event(key: String, modifiers: KeyModifiers) -> Result<(), String> {
     let mut enigo = Enigo::new(&Settings::default()).map_err(|e| format!("Enigo error: {}", e))?;
 
-    // Press modifier keys
     if modifiers.ctrl {
-        enigo.key(Key::Control, Direction::Press)
-            .map_err(|e| format!("Key error: {}", e))?;
+        enigo.key(Key::Control, Direction::Press).map_err(|e| format!("Key error: {}", e))?;
     }
     if modifiers.alt {
-        enigo.key(Key::Alt, Direction::Press)
-            .map_err(|e| format!("Key error: {}", e))?;
+        enigo.key(Key::Alt, Direction::Press).map_err(|e| format!("Key error: {}", e))?;
     }
     if modifiers.shift {
-        enigo.key(Key::Shift, Direction::Press)
-            .map_err(|e| format!("Key error: {}", e))?;
+        enigo.key(Key::Shift, Direction::Press).map_err(|e| format!("Key error: {}", e))?;
     }
     if modifiers.meta {
-        enigo.key(Key::Meta, Direction::Press)
-            .map_err(|e| format!("Key error: {}", e))?;
+        enigo.key(Key::Meta, Direction::Press).map_err(|e| format!("Key error: {}", e))?;
     }
 
-    // Map special key names to enigo Key enum
     let result = match key.as_str() {
         "Enter" => enigo.key(Key::Return, Direction::Click),
         "Backspace" => enigo.key(Key::Backspace, Direction::Click),
@@ -115,30 +110,39 @@ pub fn send_key_event(key: String, modifiers: KeyModifiers) -> Result<(), String
         "F10" => enigo.key(Key::F10, Direction::Click),
         "F11" => enigo.key(Key::F11, Direction::Click),
         "F12" => enigo.key(Key::F12, Direction::Click),
-        // Single character — type it directly
         c if c.len() == 1 => enigo.text(c),
-        // Unknown key — try to type as text
         _ => enigo.text(&key),
     };
     result.map_err(|e| format!("Key input error: {}", e))?;
 
-    // Release modifier keys (reverse order)
     if modifiers.meta {
-        enigo.key(Key::Meta, Direction::Release)
-            .map_err(|e| format!("Key error: {}", e))?;
+        enigo.key(Key::Meta, Direction::Release).map_err(|e| format!("Key error: {}", e))?;
     }
     if modifiers.shift {
-        enigo.key(Key::Shift, Direction::Release)
-            .map_err(|e| format!("Key error: {}", e))?;
+        enigo.key(Key::Shift, Direction::Release).map_err(|e| format!("Key error: {}", e))?;
     }
     if modifiers.alt {
-        enigo.key(Key::Alt, Direction::Release)
-            .map_err(|e| format!("Key error: {}", e))?;
+        enigo.key(Key::Alt, Direction::Release).map_err(|e| format!("Key error: {}", e))?;
     }
     if modifiers.ctrl {
-        enigo.key(Key::Control, Direction::Release)
-            .map_err(|e| format!("Key error: {}", e))?;
+        enigo.key(Key::Control, Direction::Release).map_err(|e| format!("Key error: {}", e))?;
     }
 
     Ok(())
+}
+
+// ======================================================
+// Android Stub Implementation
+// ======================================================
+
+#[cfg(target_os = "android")]
+#[tauri::command]
+pub fn send_mouse_event(_x: i32, _y: i32, _action: String) -> Result<(), String> {
+    Err("Mouse input simulation is not supported on Android".to_string())
+}
+
+#[cfg(target_os = "android")]
+#[tauri::command]
+pub fn send_key_event(_key: String, _modifiers: KeyModifiers) -> Result<(), String> {
+    Err("Keyboard input simulation is not supported on Android".to_string())
 }

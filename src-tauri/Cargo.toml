@@ -25,15 +25,15 @@ log = "0.4"
 # LAN Discovery
 mdns-sd = "0.11"
 
-# Screen Capture
-scrap = "0.5"
-
-# Input Simulation
-enigo = "0.2"
-
 # Image encoding
 image = { version = "0.25", default-features = false, features = ["jpeg"] }
 
 # Utilities
 hostname = "0.4"
 dirs-next = "2.0"
+
+# Desktop-only dependencies (not available on Android)
+[target.'cfg(not(target_os = "android"))'.dependencies]
+scrap = "0.5"
+enigo = "0.2"
+
