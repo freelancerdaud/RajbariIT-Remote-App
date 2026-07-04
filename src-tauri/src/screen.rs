@@ -18,11 +18,13 @@ use scrap::{Capturer, Display};
 #[cfg(not(target_os = "android"))]
 use std::io::Cursor;
 
+#[cfg(not(target_os = "android"))]
 use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(not(target_os = "android"))]
 use std::sync::Mutex;
 
 /// Flag to track whether hosting is active
+#[cfg(not(target_os = "android"))]
 static IS_HOSTING: AtomicBool = AtomicBool::new(false);
 
 /// Cached screen dimensions
