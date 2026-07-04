@@ -3,7 +3,7 @@ name: "Publish Release"
 on:
   push:
     tags:
-      - 'v*' # Trigger on tagging (e.g. v1.0.0)
+      - 'v*' # Trigger on tagging (e.g. v1.0.1)
 
 jobs:
   publish-tauri:
@@ -13,13 +13,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest" # Build macOS
+          - platform: "macos-latest" # Build macOS (.dmg)
             args: "--target aarch64-apple-darwin"
-          - platform: "windows-latest" # Build Windows
+          - platform: "windows-latest" # Build Windows (.exe/.msi)
             args: ""
-          - platform: "ubuntu-latest" # Build Android APK (ubuntu has fast build env)
+          - platform: "ubuntu-latest" # Build Android APK
             args: "--target aarch64-linux-android"
             android: true
+          - platform: "ubuntu-latest" # Build Linux Desktop (.deb)
+            args: ""
+            linux: true
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -57,8 +60,9 @@ jobs:
         if: matrix.android
         run: rustup target add aarch64-linux-android
 
-      - name: install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-latest' && !matrix.android
+      # Setup Linux dependencies if building Linux Desktop
+      - name: install dependencies (Linux Desktop only)
+        if: matrix.platform == 'ubuntu-latest' && matrix.linux
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
@@ -75,7 +79,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Set NDK path for compiler
+          # Set NDK path for compiler (Android only)
           NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
         with:
           tagName: ${{ github.ref_name }}
